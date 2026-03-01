@@ -60,7 +60,7 @@ class UAVLLMOffloadingEnv(RawEnvironment):
         self.epsilon_LoS = 0.5
 
         # LLM parameters
-        self.B_batch = cfg_get('llm_batch_size', 8)  # Effective batch size for latency estimate
+        self.B_batch = 512  # Batch size
         self.h = 1024  # Hidden dimension
         self.theta_min = 32  # Min transformer layers
         self.theta_max = 64  # Max transformer layers
@@ -310,7 +310,7 @@ class UAVLLMOffloadingEnv(RawEnvironment):
 
     def _compute_channel_gain_server(self, uav_pos):
         """Channel gain UAV-server"""
-        distance = max(np.linalg.norm(uav_pos - self.server_pos), 1.0)
+        distance = np.linalg.norm(uav_pos - self.server_pos)
         path_loss = (4 * np.pi * self.phi / self.c)**(-2)
         gain = path_loss * self.epsilon_LoS * (distance**2)**(-self.beta_path/2)
         gain *= 1.5
@@ -346,8 +346,8 @@ class UAVLLMOffloadingEnv(RawEnvironment):
                        T_fly, thetas, E_rv, E_relay, E_tot):
         """Compute reward with penalties"""
         # Utility is treated as positive benefit; latency/power are costs.
-        utility_term = self.w_U * float(np.mean(utilities))
-        latency_term = self.w_T * float(np.mean(latencies))
+        utility_term = self.w_U * float(np.sum(utilities))
+        latency_term = self.w_T * float(np.sum(latencies))
         power_term = self.w_P * float(power_cost)
         reward = utility_term - latency_term - power_term
 
@@ -356,21 +356,16 @@ class UAVLLMOffloadingEnv(RawEnvironment):
 
         if self.uav_energy < self.E_min:
             penalty = self.penalty_energy_low_coef * (self.E_min - self.uav_energy) / self.E_bg
-            penalty = float(min(penalty, self.reward_clip))
             penalties -= penalty
             info['violations'].append(f'energy_low:{penalty:.2f}')
         elif self.uav_energy > self.E_bg:
             penalty = self.penalty_energy_high_coef * (self.uav_energy - self.E_bg) / self.E_bg
-            penalty = float(min(penalty, self.reward_clip))
             penalties -= penalty
             info['violations'].append(f'energy_high:{penalty:.2f}')
 
-        latency_budget = max(self.tau, 1e-3)
         for i, lat in enumerate(latencies):
-            if lat > latency_budget:
-                # Ratio-based penalty is more stable than raw-second penalty when latency scale is large.
-                penalty = self.penalty_latency_coef * ((lat / latency_budget) - 1.0)
-                penalty = float(min(penalty, self.reward_clip / max(self.N, 1)))
+            if lat > (self.tau - T_fly):
+                penalty = self.penalty_latency_coef * (lat - (self.tau - T_fly))
                 penalties -= penalty
                 info['violations'].append(f'latency_user{i}:{penalty:.2f}')
 
