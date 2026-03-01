@@ -13,7 +13,7 @@ from agents.base.helpers import (cosine_beta_schedule,
                             vp_beta_schedule,
                             extract,
                             Losses)
-from utils.base.utils import Progress, Silent
+from utils.utils import Progress, Silent
 
 
 class Diffusion(nn.Module):
