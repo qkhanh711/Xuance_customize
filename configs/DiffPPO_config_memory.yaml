@@ -1,7 +1,7 @@
 dl_toolbox: "torch"  # The deep learning toolbox. Choices: "torch", "mindspore", "tensorlayer"
-project_name: "ppo_LLM"
+project_name: "XuanCe_DiffPPO_Algorithm"
 logger: "tensorboard"  # Choices: tensorboard, wandb.
-wandb_user_name: "qkhanh711"  # Your wandb user name, only used when logger is "wandb".
+wandb_user_name: "qkhanh711"
 render: False
 render_mode: 'rgb_array' # Choices: 'human', 'rgb_array'.
 fps: 50
@@ -10,43 +10,52 @@ device: "cuda"  # Choose an calculating device. PyTorch: "cpu", "cuda:0"; Tensor
 distributed_training: False  # Whether to use multi-GPU for distributed training.
 master_port: '12355'  # The master port for current experiment when use distributed training.
 
-agent: "PPO_Clip"  # choice: PPO_Clip, PPO_KL
-env_name: "UAVLLMOffloadingEnv"
+agent: "DiffPPOAgent"
+env_name: "GAIServiceEnv_v1"
 env_id: "new_env_id"
 env_seed: 1
 vectorize: "DummyVecEnv"
-learner: "PPOCLIP_Learner"
-policy: "Gaussian_AC"  # choice: Gaussian_AC for continuous actions, Categorical_AC for discrete actions.
+learner: "DiffusionPPOLearner"
+policy: "DiffusionPPOPolicy"
 representation: "Basic_MLP"
 runner: "DRL"
 
 representation_hidden_size: [256,]
-actor_hidden_size: [256,]
-critic_hidden_size: [256,]
-activation: "leaky_relu"
+activation: 'leaky_relu'
 activation_action: 'tanh'
 
-seed: 19089
-parallels: 30
-running_steps: 150000
-horizon_size: 256  # the horizon size for an environment, buffer_size = horizon_size * parallels.
-n_epochs: 20
-n_minibatch: 8
-learning_rate: 0.0004
+seed: 79811
+parallels: 2
+buffer_size: 50000
+batch_size: 256
 
-vf_coef: 0.25
-ent_coef: 0.0
-target_kl: 0.25  # for PPO_KL agent
-kl_coef: 1.0  # for PPO_KL agent
-clip_range: 0.2  # for PPO_Clip agent
+# Optimizer
+learning_rate: 0.0002
+actor_learning_rate: 0.0002
+critic_learning_rate: 0.0006
+
+# Diffusion-PPO specific
+n_timesteps: 10
+beta_schedule: "linear"
+ema_decay: 0.99
+step_start_ema: 500
+update_ema_every: 3
+tau: 0.95
+clip_param: 0.2
+beta_diffusion: 0.5
+value_loss_coef: 0.25
+old_policy_sync: 10
+critic_updates: 3
+
+# Replay / training schedule
 gamma: 0.99
-use_gae: True
-gae_lambda: 0.95
-use_advnorm: True
+training_frequency: 1
+running_steps: 15000
+start_training: 512
 
 use_grad_clip: True  # gradient normalization
-clip_type: 1  # Gradient clip for Mindspore: 0: ms.ops.clip_by_value; 1: ms.nn.ClipByNorm()
-grad_clip_norm: 0.5
+grad_clip_norm: 1.0
+grad_norm: 1.0
 use_actions_mask: False
 use_obsnorm: True
 use_rewnorm: True
@@ -56,5 +65,5 @@ rewnorm_range: 5
 test_steps: 10000
 eval_interval: 5000
 test_episode: 5
-log_dir: "logs/ppo/"
-model_dir: "models/ppo/"
+log_dir: "logs/diffppo/"
+model_dir: "models/diffppo/"

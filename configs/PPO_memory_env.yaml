@@ -1,5 +1,5 @@
 dl_toolbox: "torch"  # The deep learning toolbox. Choices: "torch", "mindspore", "tensorlayer"
-project_name: "ppo_LLM"
+project_name: "ppo_satellite"
 logger: "tensorboard"  # Choices: tensorboard, wandb.
 wandb_user_name: "qkhanh711"  # Your wandb user name, only used when logger is "wandb".
 render: False
@@ -11,7 +11,7 @@ distributed_training: False  # Whether to use multi-GPU for distributed training
 master_port: '12355'  # The master port for current experiment when use distributed training.
 
 agent: "PPO_Clip"  # choice: PPO_Clip, PPO_KL
-env_name: "UAVLLMOffloadingEnv"
+env_name: "GAIServiceEnv_v1"
 env_id: "new_env_id"
 env_seed: 1
 vectorize: "DummyVecEnv"
@@ -26,9 +26,9 @@ critic_hidden_size: [256,]
 activation: "leaky_relu"
 activation_action: 'tanh'
 
-seed: 19089
-parallels: 30
-running_steps: 150000
+seed: 79811
+parallels: 3
+running_steps: 15000
 horizon_size: 256  # the horizon size for an environment, buffer_size = horizon_size * parallels.
 n_epochs: 20
 n_minibatch: 8

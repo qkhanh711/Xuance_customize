@@ -25,8 +25,8 @@ activation: 'leaky_relu'
 activation_action: 'tanh'
 
 seed: 19089
-parallels: 2
-buffer_size: 50000
+parallels: 30
+buffer_size: 60000
 batch_size: 256
 
 # Optimizer
@@ -50,7 +50,7 @@ critic_updates: 3
 # Replay / training schedule
 gamma: 0.99
 training_frequency: 1
-running_steps: 15000
+running_steps: 150000
 start_training: 512
 
 use_grad_clip: True  # gradient normalization

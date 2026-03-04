@@ -1,30 +1,17 @@
+import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-from argparse import Namespace
-from typing import Tuple, Dict, Any, Optional
-from xuance.environment import RawEnvironment
+from typing import Tuple, Dict, Any
 
-class UAVLLMOffloadingEnv(RawEnvironment):
+class UAVLLMOffloadingEnv(gym.Env):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__()
 
-        if isinstance(config, Namespace):
-            self.config = vars(config)
-        elif isinstance(config, dict):
-            self.config = config
-        else:
-            raise TypeError(f"Unsupported config type: {type(config)}")
-
-        cfg_get = self.config.get
-        self.render_mode = cfg_get('render_mode', 'human')
-        self.seed_value = int(cfg_get('env_seed', cfg_get('seed', 1)))
-        self.rng = np.random.default_rng(self.seed_value)
-
         # ==================== CONFIGURATION ====================
-        self.N = cfg_get('num_users', 5)  # Number of users
-        self.T = cfg_get('num_timeslots', 10)  # Episode length
-        self.tau = cfg_get('timeslot_duration', 3.0)  # seconds
+        self.N = config.get('num_users', 5)  # Number of users
+        self.T = config.get('num_timeslots', 10)  # Episode length
+        self.tau = config.get('timeslot_duration', 3.0)  # seconds
 
         # Environment bounds
         self.x_min, self.x_max = -100, 100
@@ -99,17 +86,10 @@ class UAVLLMOffloadingEnv(RawEnvironment):
         self.pb_pos = np.array([0.0, 50.0, 50.0])
 
         # Reward weights (normalized)
-        self.w_U = cfg_get('w_utility', 0.01)
-        self.w_T = cfg_get('w_latency', 1.0)
-        self.w_P = cfg_get('w_power', 0.1)
-        self.reward_clip = float(cfg_get('reward_clip', 1e4))
-        self.reward_scale = float(cfg_get('reward_scale', 1.0))
-        self.reward_bias = float(cfg_get('reward_bias', 0.0))
-        self.penalty_energy_low_coef = float(cfg_get('penalty_energy_low_coef', 100.0))
-        self.penalty_energy_high_coef = float(cfg_get('penalty_energy_high_coef', 50.0))
-        self.penalty_latency_coef = float(cfg_get('penalty_latency_coef', 10.0))
+        self.w_U = config.get('w_utility', 0.01)
+        self.w_T = config.get('w_latency', 1.0)
+        self.w_P = config.get('w_power', 0.1)
 
-        # Observation layout:
         state_dim = 3 + 8 * self.N
         self.observation_space = spaces.Box(
             low=-np.inf,
@@ -129,7 +109,6 @@ class UAVLLMOffloadingEnv(RawEnvironment):
         )
 
         self.current_step = 0
-        self.max_episode_steps = self.T
         self.uav_pos = None
         self.uav_energy = None
         self.user_positions = None
@@ -138,11 +117,9 @@ class UAVLLMOffloadingEnv(RawEnvironment):
         self.prev_latencies = None
         self.prev_utilities = None
 
-    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None) -> Tuple[np.ndarray, Dict]:
+    def reset(self, seed=None, options=None) -> Tuple[np.ndarray, Dict]:
         """Reset environment"""
-        if seed is not None:
-            self.seed_value = int(seed)
-            self.rng = np.random.default_rng(self.seed_value)
+        super().reset(seed=seed)
 
         self.uav_pos = np.array([0.0, 0.0, 55.0])
         self.uav_energy = self.E_bg
@@ -252,19 +229,6 @@ class UAVLLMOffloadingEnv(RawEnvironment):
         obs = self._get_observation()
 
         return obs, reward, terminated, truncated, info
-
-    def render(self, mode='human'):
-        print(f"Step: {self.current_step}")
-        print(f"UAV Position: {self.uav_pos}")
-        print(f"UAV Energy: {self.uav_energy:.2f} J")
-        print(f"User Positions: {self.user_positions}")
-        print(f"Task Sizes: {self.task_sizes}")
-        print(f"Token Lengths: {self.token_lengths}")
-        print(f"Previous Latencies: {self.prev_latencies}")
-        print(f"Previous Utilities: {self.prev_utilities}")
-        
-    def close(self):
-        return None
 
     def _convert_action(self, action: np.ndarray) -> Tuple:
         velocity = self.V_max * (1 + action[3]) / 2
